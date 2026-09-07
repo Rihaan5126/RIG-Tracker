@@ -188,9 +188,33 @@ docker compose up --build -d
 docker compose logs -f web worker
 ```
 
-Open [the local app](http://127.0.0.1:3000). Compose includes web, worker, PostgreSQL 17 and Redis 7, durable volumes and readiness checks. Only the web port is published, bound to loopback. PostgreSQL and Redis remain on the internal network. The web container runs as an unprivileged user. Database migration happens before readiness succeeds. `docker compose down` preserves the named volumes; do not add `-v` unless you intend to remove stored data.
+Open [the local app](http://127.0.0.1:3000). Compose includes web, worker, PostgreSQL 17, Redis 7, and a Caddy reverse proxy, plus durable volumes and readiness checks. The web port is also published on loopback for direct debugging. PostgreSQL and Redis remain on the internal network. The web container runs as an unprivileged user. Database migration happens before readiness succeeds. `docker compose down` preserves the named volumes; do not add `-v` unless you intend to remove stored data.
 
 Docker was not installed in the implementation environment, so the full Compose stack could not be executed there. Local database integration tests exercise the PostgreSQL schema through PGlite; real PostgreSQL/Redis and Docker startup remain deployment acceptance checks.
+
+## Deploying to a real server
+
+The stack (`compose.yaml`) is self-contained: web, worker, PostgreSQL, Redis, and a Caddy reverse proxy that gets you automatic HTTPS for free. To put it on the internet:
+
+1. **Get a VPS.** Any provider works (DigitalOcean, Hetzner, Linode, a spare box). A 1-2 vCPU / 1-2GB RAM box is plenty to start. Install Docker Engine + the Compose plugin on it ([get.docker.com](https://get.docker.com) is the fastest route).
+2. **Point DNS at it.** Create an `A` record for your domain (or a subdomain like `app.example.com`) pointing at the server's public IP. Caddy needs this to be live before it can issue a certificate.
+3. **Copy the repo and your `.env` to the server**, e.g. `git clone` on the box, then `scp .env user@server:/path/to/RIGtracker/.env` (never commit `.env`).
+4. **Edit `.env` on the server** and set:
+   - `DOMAIN=your-domain.example.com` (bare domain, no `https://`)
+   - `ACME_EMAIL=you@example.com` (Let's Encrypt expiry/abuse contact)
+   - `APP_URL=https://your-domain.example.com`
+   - Leave `POSTGRES_PASSWORD`, `WORKER_SECRET`, and `TOKEN_ENCRYPTION_KEY` as generated — they're already strong random values.
+   - Keep `INSTAGRAM_PROVIDER=mock` until you've completed Meta review and filled in the `META_*` fields (see above); switching to `meta` before then fails `productionCheck()` on boot.
+5. **Open ports 80 and 443** on the server's firewall (`ufw allow 80,443/tcp` or your provider's security group).
+6. **Bring it up:**
+   ```bash
+   docker compose up --build -d
+   docker compose logs -f caddy web worker
+   ```
+   Caddy will request a certificate for `DOMAIN` automatically on first request and renew it in the background. Visit `https://your-domain.example.com`.
+7. **Redeploying** after a code change: `git pull && docker compose up --build -d`. This preserves the `postgres_data`, `redis_data`, and `caddy_data` volumes (your data and certificates survive).
+
+Locally (no `DOMAIN` set), Caddy defaults to serving plain HTTP on port 80, so `docker compose up` still works unchanged for local testing — the domain/TLS setup only applies once you set `DOMAIN` for a real deployment.
 
 ## Deployment and security
 
