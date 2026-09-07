@@ -34,41 +34,38 @@ export function TrackerForm({ onClose, initial = '' }: { onClose: () => void; in
     <Modal title="Track an account" onClose={onClose}>
       <form onSubmit={submit} className="form-stack">
         <p className="muted">Build a history of changes to accounts available in your workspace.</p>
-        <label>
-          Account
-          <select value={name} onChange={(e) => setName(e.target.value)} required>
+        <label htmlFor="tracker-account">Account</label>
+        <select id="tracker-account" value={name} onChange={(e) => setName(e.target.value)} required>
             {data.profiles.map((p) => (
               <option key={p.id} value={p.username}>
                 @{p.username}
               </option>
             ))}
-          </select>
-        </label>
-        <label>
-          Refresh interval
-          <select value={interval} onChange={(e) => setInterval(e.target.value)}>
+        </select>
+        <label htmlFor="tracker-interval">Refresh interval</label>
+        <select id="tracker-interval" value={interval} onChange={(e) => setInterval(e.target.value)}>
             <option value="60">Every hour</option>
             <option value="360">Every 6 hours · recommended</option>
             <option value="720">Every 12 hours</option>
             <option value="1440">Every day</option>
             <option value="10080">Every week</option>
-          </select>
-        </label>
+        </select>
         <label className="checkbox-label">
           <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} />{' '}
           Notify me about meaningful changes
         </label>
-        <label>
+        <label htmlFor="tracker-threshold">
           Follower threshold <span className="muted">(optional)</span>
-          <input
+        </label>
+        <input
+            id="tracker-threshold"
             type="number"
             min="1"
             step="1"
             placeholder="e.g. 150000"
             value={threshold}
             onChange={(e) => setThreshold(e.target.value)}
-          />
-        </label>
+        />
         <Hint>
           Refreshes respect provider quotas and backoff. Scheduled refreshes require the worker to
           be running.

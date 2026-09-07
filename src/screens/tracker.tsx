@@ -27,7 +27,7 @@ export function Tracker() {
       toast(String(e));
     } finally {
       setBusy('');
-      setRemove('');
+      if (method === 'DELETE') setRemove('');
     }
   }
   async function refresh(name: string) {

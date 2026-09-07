@@ -52,7 +52,7 @@ test.describe.serial('RIGtracker workspace journeys', () => {
     await page.getByRole('link', { name: 'Saved Accounts', exact: true }).click();
     await page.getByRole('button', { name: 'Edit notes', exact: true }).first().click();
     await page.getByLabel('Research notes').fill('A useful research note from the browser test.');
-    await page.getByRole('button', { name: 'Save account', exact: true }).click();
+    await page.getByRole('button', { name: 'Save changes', exact: true }).click();
     await expect(page.getByText('A useful research note from the browser test.')).toBeVisible();
     await page.reload();
     await expect(page.getByText('A useful research note from the browser test.')).toBeVisible();

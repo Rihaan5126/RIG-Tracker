@@ -81,7 +81,7 @@ function EditSaved({ item, onClose }: { item?: SavedProfile; onClose: () => void
           </p>
         )}
         <button className="button primary" disabled={busy || !name}>
-          {busy ? 'Saving…' : 'Save account'}
+          {busy ? 'Saving…' : item ? 'Save changes' : 'Save account'}
         </button>
       </form>
     </Modal>
