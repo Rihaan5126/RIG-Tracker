@@ -9,3 +9,6 @@ test-results/
 *.tsbuildinfo
 *.log
 .npm-cache/
+
+.vercel
+.env*
