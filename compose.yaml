@@ -1,0 +1,84 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: rigtracker
+      POSTGRES_DB: rigtracker
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U rigtracker]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    restart: unless-stopped
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    restart: unless-stopped
+  web:
+    build:
+      context: .
+      target: web
+    ports:
+      - 127.0.0.1:3000:3000
+    environment:
+      APP_URL: ${APP_URL:-http://127.0.0.1:3000}
+      ALLOW_INSECURE_LOCAL_DOCKER: ${ALLOW_INSECURE_LOCAL_DOCKER:-true}
+      DATABASE_URL: postgresql://rigtracker:${POSTGRES_PASSWORD}@postgres:5432/rigtracker
+      REDIS_URL: redis://redis:6379
+      INSTAGRAM_PROVIDER: ${INSTAGRAM_PROVIDER:-mock}
+      WORKER_SECRET: ${WORKER_SECRET:?Set WORKER_SECRET in .env}
+      TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY:-}
+      ALLOW_DEMO: ${ALLOW_DEMO:-true}
+      ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-true}
+      TRUST_PROXY: ${TRUST_PROXY:-false}
+      META_APP_ID: ${META_APP_ID:-}
+      META_APP_SECRET: ${META_APP_SECRET:-}
+      META_REDIRECT_URI: ${META_REDIRECT_URI:-}
+      META_AUTHORIZATION_URL: ${META_AUTHORIZATION_URL:-}
+      META_TOKEN_URL: ${META_TOKEN_URL:-}
+      META_API_VERSION: ${META_API_VERSION:-}
+      META_SCOPES: ${META_SCOPES:-instagram_business_basic,instagram_business_manage_insights}
+      META_VERIFIED_PROFILE_FIELDS: ${META_VERIFIED_PROFILE_FIELDS:-}
+      META_VERIFIED_MEDIA_FIELDS: ${META_VERIFIED_MEDIA_FIELDS:-}
+      META_VERIFIED_INSIGHT_METRICS: ${META_VERIFIED_INSIGHT_METRICS:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:3000/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+  worker:
+    build:
+      context: .
+      target: worker
+    environment:
+      WORKER_TARGET: http://web:3000
+      WORKER_SECRET: ${WORKER_SECRET:?Set WORKER_SECRET in .env}
+    depends_on:
+      web:
+        condition: service_healthy
+    restart: unless-stopped
+volumes:
+  postgres_data:
+  redis_data:
